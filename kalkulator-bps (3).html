@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalkulator Deviasi BPS</title>
+<style>
+  :root{
+    --bg: #0B0F14;
+    --panel: #121822;
+    --panel-2: #171F2C;
+    --line: #232D3D;
+    --text: #E6E9EE;
+    --muted: #7C8797;
+    --mono: 'SF Mono', 'JetBrains Mono', Consolas, Menlo, monospace;
+    --sans: -apple-system, 'Inter', 'Segoe UI', sans-serif;
+    --green: #22C58B;
+    --red: #F0555A;
+    --amber: #E8A33D;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:24px 16px 60px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height:100vh;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+  .eyebrow{
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em;
+    color:var(--muted); text-transform:uppercase; margin-bottom:6px;
+  }
+  h1{
+    font-size:22px; font-weight:600; margin:0 0 4px;
+    letter-spacing:-.01em;
+  }
+  .sub{color:var(--muted); font-size:13px; margin-bottom:24px;}
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .card-title{
+    font-family:var(--mono); font-size:11px; letter-spacing:.1em;
+    color:var(--muted); text-transform:uppercase; margin-bottom:14px;
+  }
+
+  .seg{
+    display:flex; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:8px; padding:3px; margin-bottom:16px;
+  }
+  .seg button{
+    flex:1; padding:9px; border:none; border-radius:6px; background:transparent;
+    color:var(--muted); font-family:var(--sans); font-weight:600; font-size:13px;
+    cursor:pointer; transition:.15s;
+  }
+  .seg button.active{background:var(--line); color:var(--text);}
+
+  .row{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;}
+  .field label{
+    display:block; font-size:12px; color:var(--muted); margin-bottom:6px;
+  }
+  .field input{
+    width:100%; background:var(--panel-2); border:1px solid var(--line);
+    border-radius:7px; padding:10px 12px; color:var(--text);
+    font-family:var(--mono); font-size:14px;
+  }
+  .field input:focus{outline:none; border-color:#3A4A63;}
+
+  .mode-toggle{
+    display:flex; gap:8px; margin-bottom:12px; font-size:12px;
+  }
+  .mode-toggle button{
+    background:none; border:1px solid var(--line); color:var(--muted);
+    padding:6px 10px; border-radius:6px; cursor:pointer; font-family:var(--sans);
+  }
+  .mode-toggle button.active{border-color:#3A4A63; color:var(--text); background:var(--panel-2);}
+
+  .result{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:20px;
+  }
+  .result-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:10px 0; border-bottom:1px solid var(--line);
+  }
+  .result-row:last-child{border-bottom:none;}
+  .result-row .label{font-size:13px; color:var(--muted);}
+  .result-row .value{font-family:var(--mono); font-size:15px; font-weight:600;}
+
+  .big{
+    font-family:var(--mono); font-size:32px; font-weight:700;
+    margin:4px 0 2px;
+  }
+  .status{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; font-family:var(--mono); padding:4px 10px;
+    border-radius:20px; margin-top:6px;
+  }
+  .status.ok{background:rgba(34,197,139,.12); color:var(--green);}
+  .status.bad{background:rgba(240,85,90,.12); color:var(--red);}
+  .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+  .green{color:var(--green);} .red{color:var(--red);} .amber{color:var(--amber);}
+  .hint{font-size:11.5px; color:var(--muted); margin-top:14px; line-height:1.5;}
+  .divider{height:1px; background:var(--line); margin:16px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Sales Trader Tools · 01</div>
+  <h1>Kalkulator Deviasi BPS</h1>
+  <div class="sub">Untuk penggunaan internal dealing room BRI Danareksa Sekuritas.</div>
+
+  <div class="card">
+    <div class="card-title">Transaksi</div>
+    <div class="seg">
+      <button id="btnJual" class="active" onclick="setSide('jual')">JUAL</button>
+      <button id="btnBeli" onclick="setSide('beli')">BELI</button>
+    </div>
+
+    <div class="field" style="margin-bottom:12px;">
+      <label>Kode saham</label>
+      <input type="text" id="ticker" placeholder="AMRT" style="text-transform:uppercase;" oninput="calc()">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Avg harga saya (Rp)</label>
+        <input type="number" id="myPrice" placeholder="1333.6585" oninput="calc()">
+      </div>
+      <div class="field">
+        <label>Avg harga market (Rp)</label>
+        <input type="number" id="marketPrice" placeholder="1358.393" oninput="calc()">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Volume (lembar saham)</label>
+        <input type="number" id="volume" placeholder="opsional, utk hitung Rp" oninput="calc()">
+      </div>
+      <div class="field">
+        <label>Max BPS diperbolehkan</label>
+        <input type="number" id="maxBps" placeholder="30" value="30" oninput="calc()">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="grid-column:1/-1;">
+        <label>Size order (Rp)</label>
+        <input type="text" id="sizeOrder" placeholder="otomatis: volume × avg harga saya" disabled style="opacity:.7; cursor:not-allowed;">
+      </div>
+    </div>
+
+    <div class="mode-toggle">
+      <span style="color:var(--muted); padding:6px 0;">Mode adjustment:</span>
+      <button id="modeMaxbps" class="active" onclick="setMode('maxbps')">Target max BPS</button>
+      <button id="modeBudget" onclick="setMode('budget')">Budget Rp tersedia</button>
+    </div>
+    <div class="row" id="budgetRow" style="display:none;">
+      <div class="field" style="grid-column:1/-1;">
+        <label>Budget kerugian yang sanggup dibayar (Rp)</label>
+        <input type="number" id="budget" placeholder="cth: 5000000" oninput="calc()">
+      </div>
+    </div>
+  </div>
+
+  <div class="result">
+    <div class="card-title" id="resultTitle">Hasil</div>
+    <div class="big" id="bpsOut">— bps</div>
+    <div class="status" id="statusOut"><span class="dot"></span><span id="statusText">isi data dulu</span></div>
+
+    <div class="divider"></div>
+
+    <div class="result-row">
+      <div class="label" id="adjLabel">Harga adjusted (kena max BPS)</div>
+      <div class="value" id="adjPrice">—</div>
+    </div>
+    <div class="result-row">
+      <div class="label" id="lossLabel">Kerugian yang perlu ditutup</div>
+      <div class="value" id="lossRp">—</div>
+    </div>
+    <div class="result-row" id="achievableRow" style="display:none;">
+      <div class="label">BPS yang bisa dicapai dgn budget itu</div>
+      <div class="value" id="achievableBps">—</div>
+    </div>
+
+    <div class="hint" id="formulaHint"></div>
+  </div>
+
+  <div class="card" id="nabungCard" style="display:none;">
+    <div class="card-title">Tabungan Keuntungan</div>
+    <div class="result-row" style="border-bottom:none; padding-top:0;">
+      <div class="label">Total untung saat ini</div>
+      <div class="value green" id="totalUntungRp">—</div>
+    </div>
+
+    <div class="mode-toggle" style="margin-top:8px;">
+      <span style="color:var(--muted); padding:6px 0;">Mau nabung dalam:</span>
+      <button id="modeNabungBps" class="active" onclick="setNabungMode('bps')">BPS</button>
+      <button id="modeNabungRp" onclick="setNabungMode('rp')">Rupiah</button>
+    </div>
+    <div class="row">
+      <div class="field" style="grid-column:1/-1;">
+        <label id="nabungInputLabel">Mau nabung berapa bps?</label>
+        <input type="number" id="nabungInput" placeholder="cth: 20" oninput="calc()">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="result-row">
+      <div class="label">Ditabung</div>
+      <div class="value amber" id="nabungRpOut">—</div>
+    </div>
+    <div class="result-row">
+      <div class="label">Sisa untung (tidak ditabung)</div>
+      <div class="value" id="sisaUntungRp">—</div>
+    </div>
+    <div class="result-row">
+      <div class="label">Harga adjusted (setelah nabung)</div>
+      <div class="value" id="nabungAdjPrice">—</div>
+    </div>
+    <div class="hint" id="nabungHint"></div>
+  </div>
+</div>
+
+<script>
+let nabungMode = 'bps';
+function setNabungMode(m){
+  nabungMode = m;
+  document.getElementById('modeNabungBps').classList.toggle('active', m==='bps');
+  document.getElementById('modeNabungRp').classList.toggle('active', m==='rp');
+  document.getElementById('nabungInputLabel').textContent = m==='bps' ? 'Mau nabung berapa bps?' : 'Mau nabung berapa Rupiah?';
+  document.getElementById('nabungInput').placeholder = m==='bps' ? 'cth: 20' : 'cth: 3000000';
+  calc();
+}
+</script>
+
+<script>
+let side = 'jual';
+let mode = 'maxbps';
+
+function setSide(s){
+  side = s;
+  document.getElementById('btnJual').classList.toggle('active', s==='jual');
+  document.getElementById('btnBeli').classList.toggle('active', s==='beli');
+  calc();
+}
+function setMode(m){
+  mode = m;
+  document.getElementById('modeMaxbps').classList.toggle('active', m==='maxbps');
+  document.getElementById('modeBudget').classList.toggle('active', m==='budget');
+  document.getElementById('budgetRow').style.display = m==='budget' ? 'grid' : 'none';
+  calc();
+}
+function fmtRp(n){
+  if(!isFinite(n)) return '—';
+  return 'Rp ' + n.toLocaleString('id-ID', {maximumFractionDigits:0});
+}
+function fmtPrice(n){
+  if(!isFinite(n)) return '—';
+  return n.toLocaleString('id-ID', {maximumFractionDigits:4});
+}
+
+function calc(){
+  const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+  const my = parseFloat(document.getElementById('myPrice').value);
+  const mkt = parseFloat(document.getElementById('marketPrice').value);
+  const vol = parseFloat(document.getElementById('volume').value);
+  const maxBps = parseFloat(document.getElementById('maxBps').value) || 0;
+  const budget = parseFloat(document.getElementById('budget').value);
+
+  document.getElementById('resultTitle').textContent = ticker ? `Hasil — ${ticker}` : 'Hasil';
+
+  // size order = volume x avg harga saya
+  const sizeOrderEl = document.getElementById('sizeOrder');
+  if(isFinite(my) && isFinite(vol) && vol > 0){
+    sizeOrderEl.value = fmtRp(my * vol);
+  } else {
+    sizeOrderEl.value = '';
+  }
+
+  const bpsOut = document.getElementById('bpsOut');
+  const statusOut = document.getElementById('statusOut');
+  const statusText = document.getElementById('statusText');
+  const adjPriceEl = document.getElementById('adjPrice');
+  const lossRpEl = document.getElementById('lossRp');
+  const achievableRow = document.getElementById('achievableRow');
+  const achievableBpsEl = document.getElementById('achievableBps');
+  const formulaHint = document.getElementById('formulaHint');
+  const adjLabel = document.getElementById('adjLabel');
+  const lossLabel = document.getElementById('lossLabel');
+
+  if(!isFinite(my) || !isFinite(mkt) || mkt === 0){
+    bpsOut.textContent = '— bps';
+    statusText.textContent = 'isi harga saya & harga market dulu';
+    statusOut.className = 'status';
+    adjPriceEl.textContent = '—';
+    lossRpEl.textContent = '—';
+    achievableRow.style.display = 'none';
+    formulaHint.textContent = '';
+    document.getElementById('nabungCard').style.display = 'none';
+    return;
+  }
+
+  // bps loss: positif = rugi, negatif = untung
+  let bpsLoss;
+  if(side === 'jual'){
+    bpsLoss = (mkt - my) / mkt * 10000; // jual di bawah market = rugi
+  } else {
+    bpsLoss = (my - mkt) / mkt * 10000; // beli di atas market = rugi
+  }
+
+  const bpsColor = bpsLoss > maxBps ? 'red' : (bpsLoss > 0 ? 'amber' : 'green');
+  bpsOut.className = 'big ' + bpsColor;
+  bpsOut.textContent = (bpsLoss >= 0 ? '' : '+') + (-bpsLoss > 0 ? '' : '') + bpsLoss.toFixed(2) + ' bps ' + (bpsLoss > 0 ? '(rugi)' : '(untung)');
+
+  const overLimit = bpsLoss > maxBps;
+  statusOut.className = 'status ' + (overLimit ? 'bad' : 'ok');
+  statusText.textContent = overLimit
+    ? `melebihi limit ${maxBps} bps — perlu adjustment`
+    : `masih dalam limit ${maxBps} bps`;
+
+  // --- Bagian tabungan keuntungan (muncul kalau posisi untung, bpsLoss negatif) ---
+  const nabungCard = document.getElementById('nabungCard');
+  if(bpsLoss < 0){
+    nabungCard.style.display = 'block';
+    const bpsUntung = -bpsLoss;
+    const totalUntungRp = document.getElementById('totalUntungRp');
+    const nabungRpOut = document.getElementById('nabungRpOut');
+    const sisaUntungRp = document.getElementById('sisaUntungRp');
+    const nabungHint = document.getElementById('nabungHint');
+    const nabungInput = parseFloat(document.getElementById('nabungInput').value);
+    const nabungAdjPriceEl = document.getElementById('nabungAdjPrice');
+
+    // helper: dari nabungBps, hitung harga adjusted
+    function priceFromRemainingBps(remainingBps){
+      if(side === 'jual'){
+        return mkt * (1 + remainingBps/10000); // untung jual: harga di atas market
+      } else {
+        return mkt * (1 - remainingBps/10000); // untung beli: harga di bawah market
+      }
+    }
+
+    if(isFinite(vol) && vol > 0){
+      const profitPerShare = side === 'jual' ? (my - mkt) : (mkt - my);
+      const totalProfit = profitPerShare * vol;
+      totalUntungRp.textContent = fmtRp(totalProfit) + ` (${bpsUntung.toFixed(2)} bps)`;
+
+      if(isFinite(nabungInput) && nabungInput > 0){
+        let nabungRp, nabungBps;
+        if(nabungMode === 'bps'){
+          nabungBps = nabungInput;
+          nabungRp = nabungBps/10000 * mkt * vol;
+        } else {
+          nabungRp = nabungInput;
+          nabungBps = nabungRp / (mkt * vol) * 10000;
+        }
+        const sisa = totalProfit - nabungRp;
+        nabungRpOut.textContent = fmtRp(nabungRp) + ` (${nabungBps.toFixed(2)} bps)`;
+        sisaUntungRp.textContent = fmtRp(sisa);
+        sisaUntungRp.className = 'value ' + (sisa < 0 ? 'red' : 'green');
+
+        const remainingBps = bpsUntung - nabungBps;
+        const nabungAdjPrice = priceFromRemainingBps(remainingBps);
+        nabungAdjPriceEl.textContent = fmtPrice(nabungAdjPrice) + (remainingBps < 0 ? ' (nabung > untung yg ada)' : '');
+        nabungAdjPriceEl.className = 'value ' + (remainingBps < 0 ? 'red' : '');
+
+        nabungHint.textContent = sisa < 0
+          ? `Nabungnya lebih besar dari total untung yang ada — kelebihan ${fmtRp(-sisa)}.`
+          : `Rumus: nabung Rp = bps ÷ 10.000 × harga_market × volume = ${nabungBps.toFixed(2)} ÷ 10.000 × ${fmtPrice(mkt)} × ${vol.toLocaleString('id-ID')}. Harga adjusted dihitung dari sisa bps untung (${remainingBps.toFixed(2)} bps) terhadap harga market.`;
+      } else {
+        nabungRpOut.textContent = '—';
+        sisaUntungRp.textContent = fmtRp(totalProfit);
+        sisaUntungRp.className = 'value green';
+        nabungAdjPriceEl.textContent = '—';
+        nabungAdjPriceEl.className = 'value';
+        nabungHint.textContent = 'Isi berapa mau ditabung di atas.';
+      }
+    } else {
+      totalUntungRp.textContent = `${bpsUntung.toFixed(2)} bps`;
+      nabungRpOut.textContent = '—';
+      sisaUntungRp.textContent = '—';
+
+      if(isFinite(nabungInput) && nabungInput > 0 && nabungMode === 'bps'){
+        const remainingBps = bpsUntung - nabungInput;
+        const nabungAdjPrice = priceFromRemainingBps(remainingBps);
+        nabungAdjPriceEl.textContent = fmtPrice(nabungAdjPrice) + (remainingBps < 0 ? ' (nabung > untung yg ada)' : '');
+        nabungAdjPriceEl.className = 'value ' + (remainingBps < 0 ? 'red' : '');
+        nabungHint.textContent = `Volume belum diisi, jadi Rp belum bisa dihitung — tapi harga adjusted tetap bisa dari sisa bps (${remainingBps.toFixed(2)} bps).`;
+      } else {
+        nabungAdjPriceEl.textContent = '—';
+        nabungAdjPriceEl.className = 'value';
+        nabungHint.textContent = 'Isi volume (lembar saham) di atas supaya bisa dihitung dalam Rupiah. Untuk hitung harga adjusted tanpa volume, pakai mode nabung "BPS".';
+      }
+    }
+  } else {
+    nabungCard.style.display = 'none';
+  }
+
+  if(mode === 'maxbps'){
+    achievableRow.style.display = 'none';
+    if(!overLimit){
+      adjLabel.textContent = 'Harga adjusted';
+      lossLabel.textContent = 'Kerugian yang perlu ditutup';
+      adjPriceEl.textContent = 'tidak perlu adjust';
+      lossRpEl.textContent = 'Rp 0';
+      formulaHint.textContent = 'Deviasi masih di bawah limit, tidak perlu ada penyesuaian harga.';
+      return;
+    }
+    // harga adjusted supaya persis di max bps
+    let adjPrice;
+    if(side === 'jual'){
+      adjPrice = mkt * (1 - maxBps/10000);
+    } else {
+      adjPrice = mkt * (1 + maxBps/10000);
+    }
+    adjLabel.textContent = `Harga adjusted (supaya pas ${maxBps} bps)`;
+    adjPriceEl.textContent = fmtPrice(adjPrice);
+
+    if(isFinite(vol) && vol > 0){
+      const diffPerShare = side === 'jual' ? (adjPrice - my) : (my - adjPrice);
+      const lossRupiah = diffPerShare * vol;
+      lossLabel.textContent = 'Kerugian yang perlu ditutup (Rp)';
+      lossRpEl.textContent = fmtRp(lossRupiah);
+      formulaHint.textContent = side === 'jual'
+        ? `Rumus: kerugian = (harga_adjusted − harga_saya) × volume = (${fmtPrice(adjPrice)} − ${fmtPrice(my)}) × ${vol.toLocaleString('id-ID')}`
+        : `Rumus: kerugian = (harga_saya − harga_adjusted) × volume = (${fmtPrice(my)} − ${fmtPrice(adjPrice)}) × ${vol.toLocaleString('id-ID')}`;
+    } else {
+      lossLabel.textContent = 'Kerugian per lembar (Rp)';
+      const diffPerShare = side === 'jual' ? (adjPrice - my) : (my - adjPrice);
+      lossRpEl.textContent = fmtRp(diffPerShare) + ' /lembar';
+      formulaHint.textContent = 'Isi volume untuk lihat total kerugian dalam Rupiah.';
+    }
+  } else {
+    // mode budget
+    adjLabel.textContent = 'Harga adjusted (dgn budget tsb)';
+    lossLabel.textContent = 'Budget kerugian';
+    if(!isFinite(vol) || vol <= 0){
+      adjPriceEl.textContent = '—';
+      lossRpEl.textContent = isFinite(budget) ? fmtRp(budget) : '—';
+      achievableRow.style.display = 'none';
+      formulaHint.textContent = 'Isi volume (lembar saham) supaya budget bisa dikonversi ke BPS.';
+      return;
+    }
+    if(!isFinite(budget) || budget < 0){
+      adjPriceEl.textContent = '—';
+      lossRpEl.textContent = '—';
+      achievableRow.style.display = 'none';
+      formulaHint.textContent = 'Isi budget kerugian (Rp) yang sanggup dibayar.';
+      return;
+    }
+    const perShare = budget / vol;
+    let adjPrice;
+    if(side === 'jual'){
+      adjPrice = my + perShare; // top up dari harga saya
+    } else {
+      adjPrice = my - perShare;
+    }
+    let achievableBps;
+    if(side === 'jual'){
+      achievableBps = (mkt - adjPrice) / mkt * 10000;
+    } else {
+      achievableBps = (adjPrice - mkt) / mkt * 10000;
+    }
+    adjPriceEl.textContent = fmtPrice(adjPrice);
+    lossRpEl.textContent = fmtRp(budget);
+    achievableRow.style.display = 'flex';
+    const achColor = achievableBps > maxBps ? 'red' : 'green';
+    achievableBpsEl.innerHTML = `<span class="${achColor}">${achievableBps.toFixed(2)} bps</span>` + (achievableBps > maxBps ? ' (masih di atas limit)' : ' (sudah di dalam limit)');
+    formulaHint.textContent = `Rumus: per_lembar = budget ÷ volume = ${fmtRp(budget)} ÷ ${vol.toLocaleString('id-ID')} = ${fmtRp(perShare)}/lembar → BPS tercapai = ${achievableBps.toFixed(2)}`;
+  }
+}
+
+calc();
+</script>
+</body>
+</html>
